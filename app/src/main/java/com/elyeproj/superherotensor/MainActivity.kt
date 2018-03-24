@@ -3,16 +3,19 @@ package com.elyeproj.superherotensor
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.View
 import com.elyeproj.superherotensor.tensorflow.Classifier
 import com.elyeproj.superherotensor.tensorflow.TensorFlowImageClassifier
 import com.wonderkiln.camerakit.CameraKitImage
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.launch
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
+        private const val TAG = "MainActivity"
         private const val INPUT_WIDTH = 300
         private const val INPUT_HEIGHT = 300
         private const val IMAGE_MEAN = 128
@@ -23,13 +26,13 @@ class MainActivity : AppCompatActivity() {
         private const val LABEL_FILE = "file:///android_asset/hero_labels.txt"
     }
 
-    private lateinit var classifier: Classifier
-
+    private var classifier: Classifier? = null
+    private var initializeJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
+        initializeTensorClassifier()
         buttonRecognize.setOnClickListener {
             setVisibilityOnCaptured(false)
             cameraView.captureImage {
@@ -38,15 +41,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        initializeTensorClassifier()
-    }
-
     private fun onImageCaptured(it: CameraKitImage) {
         val bitmap = Bitmap.createScaledBitmap(it.bitmap, INPUT_WIDTH, INPUT_HEIGHT, false)
         showCapturedImage(bitmap)
-        showRecognizedResult(classifier.recognizeImage(bitmap))
+
+        classifier?.let {
+            try {
+                showRecognizedResult(it.recognizeImage(bitmap))
+            } catch (e: java.lang.RuntimeException) {
+                Log.e(TAG, "Crashing due to classification.closed() before the recognizer finishes!")
+            }
+        }
     }
 
     private fun showRecognizedResult(results: MutableList<Classifier.Recognition>) {
@@ -87,7 +92,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeTensorClassifier() {
-        launch {
+        initializeJob = launch {
             try {
                 classifier = TensorFlowImageClassifier.create(
                         assets, MODEL_FILE, LABEL_FILE, INPUT_WIDTH, INPUT_HEIGHT,
@@ -102,6 +107,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun clearTensorClassifier() {
+        initializeJob?.cancel()
+        classifier?.close()
+    }
+
     override fun onResume() {
         super.onResume()
         cameraView.start()
@@ -112,9 +122,8 @@ class MainActivity : AppCompatActivity() {
         cameraView.stop()
     }
 
-    override fun onStop() {
-        super.onStop()
-        buttonRecognize.isEnabled = false
-        classifier.close()
+    override fun onDestroy() {
+        super.onDestroy()
+        clearTensorClassifier()
     }
 }
