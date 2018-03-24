@@ -36,6 +36,10 @@ class MainActivity : AppCompatActivity() {
                 onImageCaptured(it)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
         initializeTensorClassifier()
     }
 
@@ -110,6 +114,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        buttonRecognize.isEnabled = false
         classifier.close()
     }
 }
