@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">SuperHeroTensor</string>
+    <string name="btn_recognize_text">Who is This?</string>
+    <string name="result_no_hero_found">Ops I don\'t know this Super Hero</string>
+    <string name="result_confident_hero_found">This is surely %1$s.</string>
+    <string name="result_think_hero_found">I think I see %1$s.</string>
+    <string name="result_maybe_hero_found">Hmm, is this %1$s?</string>
+</resources>
